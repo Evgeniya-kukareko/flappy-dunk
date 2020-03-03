@@ -139,13 +139,17 @@ const ball = {
 const hoops = {
     position : [],
 
-    sx : 20,
-    sy : 720,
-    sh: 210,
-    sw : 390,
+    top : {
+        sX : 0,
+        sY : 700
+    },
+    bottom:{
+        sX : 2,
+        sY : 757
+    },
 
-    dw : 150,
-    dh : 95,
+    sh : 32,
+    sw : 119,
     
     maxYPos : 180,
     nx : 2,
@@ -153,8 +157,16 @@ const hoops = {
     draw : function() {
         for(let i = 0; i < this.position.length; i++) {
             let p = this.position[i];
+
+            let topYPos = p.y;
+            let bottomYPos = p.y + this.sh;
+
+            // top hoop
+            ctx.drawImage(sprite, this.top.sX, this.top.sY, this.sw, this.sh, p.x, topYPos, this.sw, this.sh);  
             
-            ctx.drawImage(sprite, this.sx, this.sy, this.sw, this.sh, p.x, p.y, this.dw, this.dh);  
+            // bottom hoop
+            ctx.drawImage(sprite, this.bottom.sX, this.bottom.sY, this.sw, this.sh, p.x, bottomYPos, this.sw, this.sh); 
+             
         }
     },
     update: function(){
@@ -168,6 +180,24 @@ const hoops = {
         }
         for(let i = 0; i < this.position.length; i++){
             let p = this.position[i];
+            
+            // COLLISION DETECTION BOTTOM HOOP
+            // function clamp(val, min, max) {
+            //     return Math.max(min, Math.min(max, val))
+            // };
+            // const closestX = clamp(ball.dX, this.p.x, this.p.x, + this.sw);
+	        // const closestY = clamp(ball.dY, this.p.y, this.p.y + this.sh);
+
+            // const distanceX = closestX - this.p.x;
+            // const distanceY = closestY - this.p.y;
+            
+            // const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+
+            // if (distanceSquared < (this.radius * this.radius)) {
+            //     state.current = state.game;
+            // } else {
+            //     state.current = state.over;
+            // }
             
             // MOVE THE Hoop TO THE LEFT
             p.x -= this.nx;
