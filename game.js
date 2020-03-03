@@ -1,9 +1,12 @@
+const DEBUG = true;
+
 const cvs = document.getElementById("my-canvas");
 const ctx = cvs.getContext("2d");
 
 const startBtn = document.getElementById("start");
 
 const DEGREE = Math.PI / 180;
+const DEAD_LINE = 81;
 let frames = 0;
 
 const sprite = new Image();
@@ -33,10 +36,20 @@ const state = {
     over: 2
 }
 
+function detectRectCollision(zone1, zone2) {
+    if (zone1[0] < zone2[0] + zone2[2] &&
+        zone1[0] + zone1[2] > zone2[0] &&
+        zone1[1] < zone2[1] + zone2[3] &&
+        zone1[1] + zone1[3] > zone2[1]) {
+        return true;
+    }
+    return false;
+}
+
 cvs.addEventListener("click", function (event) {
     switch (state.current) {
         case state.game:
-            if (ball.dY - ball.radius <= 0) return;
+            if (ball.dY - ball.radius() <= 0) return;
             ball.flap();
             FLAP.play();
             break;
@@ -49,15 +62,16 @@ const bg = {
     sy: 81,
     sw: 970,
     sh: 600,
-    dx : 0,
+
+    dx: 0,
     dy: 0,
 
-    w : 800,
-    h : 600,
-    nx : 2,
+    w: 800,
+    h: 600,
+    nx: 2,
 
     draw: function () {
-        if (state.current == state.start) {
+        if (state.current === state.start) {
             ctx.fillStyle = "#ecdfc8";
             ctx.fillRect;
         } else {
@@ -66,55 +80,77 @@ const bg = {
             ctx.drawImage(sprite, this.sx, this.sy, this.sw, this.sh, this.dx + this.sw, this.dy, this.sw, this.h);
         }
     },
-    update: function() {
-        if(state.current == state.game){
+    update: function () {
+        if (state.current === state.game) {
             this.dx = (this.dx - this.nx) % 970;
         }
     }
-}
+};
 
 // BALL
 const ball = {
-    sx: 0,
-    sy: 0,
+    // source
+    sx: 5,
+    sy: 5,
+    sw: 70,
+    sh: 70,
+
     dX: 150,
     dY: 150,
-    
-    wh: 80,
 
-    radius: 40,
+    // ball size
+    wh: 50,
 
+    // other params
     gravity: 0.25,
     jump: 4.6,
     speed: 0,
     rotation: 0,
+    startPosition: 150,
 
+    scoreYPercent: 0.2,
+
+    radius: function () {
+        return this.wh / 2;
+    },
     draw: function () {
-        if (state.current == state.start) {
-            ctx.drawImage(sprite, this.sx, this.sy, this.wh, this.wh, cvs.width/2 - this.wh / 2, cvs.height/2 - this.wh / 2, 100, 100);
+        if (state.current === state.start) {
+            // on start screen
+            ctx.drawImage(sprite, this.sx, this.sy, this.sw, this.sh, cvs.width / 2 - this.wh / 2, cvs.height / 2 - this.wh / 2, 100, 100);
         } else {
+            if (DEBUG) {
+                ctx.strokeStyle = 'yellow';
+                ctx.beginPath();
+                ctx.rect(...this.zone());
+                ctx.stroke();
+
+                // score zone
+                ctx.fillStyle = 'gold';
+                ctx.fillRect(...this.scoreZone());
+            }
+
             ctx.save();
-            ctx.translate(this.dX, this.dY);
+            ctx.translate(this.dX + this.wh / 2, this.dY + this.wh / 2);
             ctx.rotate(this.rotation);
 
-            ctx.drawImage(sprite, this.sx, this.sy, this.wh, this.wh, - this.wh / 2, - this.wh / 2, this.wh, this.wh);
+            ctx.drawImage(sprite, this.sx, this.sy, this.sw, this.sh, -this.wh / 2, -this.wh / 2, this.wh, this.wh);
 
             ctx.restore();
         }
 
     },
     update: function () {
-        
-        if (state.current == state.start) {
-            this.dY = 150; // RESET POSITION OF THE BALL AFTER GAME OVER
-            this.rotation = 0 * DEGREE;
+
+        if (state.current === state.start) {
+            this.dY = this.startPosition; // RESET POSITION OF THE BALL AFTER GAME OVER
+            this.rotation = 0;
         } else {
             this.speed += this.gravity;
             this.dY += this.speed;
 
-            if (this.dY + this.wh / 2 >= cvs.height - 81) {
-                this.dY = cvs.height - 81 - this.wh / 2;
-                if (state.current == state.game) {
+            if (this.dY + this.wh / 2 >= cvs.height - DEAD_LINE) {
+                this.dY = cvs.height - DEAD_LINE - this.wh / 2;
+                if (state.current === state.game) {
                     state.current = state.over;
                     DIE.play();
                 }
@@ -123,94 +159,207 @@ const ball = {
             // IF THE SPEED IS GREATER THAN THE JUMP MEANS THE BALL IS FALLING DOWN
             if (this.speed >= this.jump) {
                 this.rotation = 90 * DEGREE;
-                
+
             } else {
                 this.rotation = -25 * DEGREE;
             }
         }
     },
     flap: function () {
-        this.speed = - this.jump;
+        this.speed = -this.jump;
     },
+    zone: function () {
+        return [this.dX, this.dY, this.wh, this.wh];
+    },
+    scoreZone: function () {
+        return [this.dX, this.dY, this.wh, this.wh * this.scoreYPercent];
+    }
+};
 
+class Hoop {
+    enterVisited = false;
+    exitVisited = false;
+    scored = false;
+    width = 119;
+    height = 66;
+
+    borderPercent = 0.30;
+    enterYPercent = 0.4;
+    scoreYPercent = 0.1;
+
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    enterZone() {
+        const borderWidth = this.width * this.borderPercent;
+
+        const x = this.x + borderWidth;
+        const y = this.y;
+
+        const width = this.width - borderWidth * 2;
+        const height = this.height * this.enterYPercent;
+
+        return [x, y, width, height];
+    }
+
+    exitZone() {
+        const borderWidth = this.width * this.borderPercent;
+
+        const x = this.x + borderWidth;
+        const y = this.y + this.height * this.enterYPercent;
+
+        const width = this.width - borderWidth * 2;
+        const height = this.height * (1 - this.enterYPercent);
+
+        return [x, y, width, height];
+    }
+
+    scoreZone() {
+        const borderWidth = this.width * this.borderPercent;
+
+        const x = this.x + borderWidth;
+        const y = this.y + this.height * (1 - this.scoreYPercent);
+
+        const width = this.width - borderWidth * 2;
+        const height = this.height * this.scoreYPercent;
+
+        return [x, y, width, height];
+    }
+
+    hitBox() {
+        return [this.x, this.y, this.width, this.height];
+    }
 }
 
 // HOOPS
 const hoops = {
-    position : [],
+    frequencyRate: 180,
 
-    top : {
-        sX : 0,
-        sY : 700
+    position: [],
+
+    top: {
+        sX: 0,
+        sY: 701,
+        sw: 119,
+        sh: 26,
     },
-    bottom:{
-        sX : 2,
-        sY : 757
+    bottom: {
+        sX: 0,
+        sY: 729,
+        sw: 119,
+        sh: 40,
     },
 
-    sh : 32,
-    sw : 119,
-    
-    maxYPos : 180,
-    nx : 2,
+    maxYPos: 180,
+    nx: 2,
 
-    draw : function() {
-        for(let i = 0; i < this.position.length; i++) {
-            let p = this.position[i];
-
-            let topYPos = p.y;
-            let bottomYPos = p.y + this.sh;
+    drawTop: function () {
+        for (let i = 0; i < this.position.length; i++) {
+            const hoop = this.position[i];
 
             // top hoop
-            ctx.drawImage(sprite, this.top.sX, this.top.sY, this.sw, this.sh, p.x, topYPos, this.sw, this.sh);  
-            
+            ctx.drawImage(
+                sprite,
+                this.top.sX, this.top.sY, this.top.sw, this.top.sh,
+                hoop.x, hoop.y, this.top.sw, this.top.sh
+            );
+        }
+    },
+    drawBottom: function () {
+        for (let i = 0; i < this.position.length; i++) {
+            const hoop = this.position[i];
+
             // bottom hoop
-            ctx.drawImage(sprite, this.bottom.sX, this.bottom.sY, this.sw, this.sh, p.x, bottomYPos, this.sw, this.sh); 
-             
-        }
-    },
-    update: function(){
-        if(state.current !== state.game) return;
-        
-        if(frames%180 == 0){
-            this.position.push({
-                x : cvs.width,
-                y : this.maxYPos * ( Math.random() + 1)
-            });
-        }
-        for(let i = 0; i < this.position.length; i++){
-            let p = this.position[i];
-            
-            // COLLISION DETECTION BOTTOM HOOP
-            // function clamp(val, min, max) {
-            //     return Math.max(min, Math.min(max, val))
-            // };
-            // const closestX = clamp(ball.dX, this.p.x, this.p.x, + this.sw);
-	        // const closestY = clamp(ball.dY, this.p.y, this.p.y + this.sh);
+            ctx.drawImage(
+                sprite,
+                this.bottom.sX, this.bottom.sY, this.bottom.sw, this.bottom.sh,
+                hoop.x, hoop.y + this.top.sh, this.bottom.sw, this.bottom.sh
+            );
 
-            // const distanceX = closestX - this.p.x;
-            // const distanceY = closestY - this.p.y;
-            
-            // const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+            if (DEBUG) {
+                // draw hitbox
+                ctx.strokeStyle = 'black';
+                ctx.beginPath();
+                ctx.rect(...hoop.hitBox());
+                ctx.stroke();
 
-            // if (distanceSquared < (this.radius * this.radius)) {
-            //     state.current = state.game;
-            // } else {
-            //     state.current = state.over;
-            // }
-            
-            // MOVE THE Hoop TO THE LEFT
-            p.x -= this.nx;
+                // draw enter zone
+                ctx.strokeStyle = 'green';
+                ctx.beginPath();
+                ctx.rect(...hoop.enterZone());
+                ctx.stroke();
 
-            // if the hoops go beyond canvas, we delete them from the array
-            if(p.x + this.dw <= 0){
-                this.position.shift();
-                
+                // draw back door zone
+                ctx.strokeStyle = 'red';
+                ctx.beginPath();
+                ctx.rect(...hoop.exitZone());
+                ctx.stroke();
+
+                // score zone
+                ctx.fillStyle = 'gold';
+                ctx.fillRect(...hoop.scoreZone());
             }
-           
+
         }
     },
-}
+    update: function () {
+        if (state.current !== state.game) return;
+
+        if (frames % this.frequencyRate === 0) {
+            this.position.push(new Hoop(
+                cvs.width,
+                this.maxYPos * (Math.random() + 1)
+            ));
+        }
+
+        for (let i = 0; i < this.position.length; i++) {
+            const hoop = this.position[i];
+
+            // MOVE THE Hoop TO THE LEFT
+            hoop.x -= this.nx;
+
+            if (hoop.x < (ball.dX - ball.wh * 3) && !hoop.scored) {
+                state.current = state.over;
+                return;
+            }
+
+            if (!hoop.enterVisited && !hoop.exitVisited && detectRectCollision(ball.zone(), hoop.enterZone())) {
+                hoop.enterVisited = true;
+            } else if (!hoop.exitVisited && detectRectCollision(ball.zone(), hoop.exitZone())) {
+                if (hoop.enterVisited) {
+
+                    if (detectRectCollision(ball.scoreZone(), hoop.scoreZone())) {
+                        hoop.exitVisited = true;
+                        hoop.scored = true;
+
+                        scoreBoard.addScore();
+                    }
+                } else {
+                    hoop.exitVisited = true;
+                    state.current = state.over;
+                    return;
+                }
+
+            }
+        }
+    },
+};
+
+const scoreBoard = {
+    bestScore: 0,
+    currentScore: 0,
+    addScore: function () {
+        this.currentScore += 1;
+        SCORE_S.play();
+    },
+    draw: function () {
+        ctx.font = "24px Arial";
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText("Score: " + this.currentScore, cvs.width / 2 - 50, 25);
+    }
+};
 
 // GAME OVER MESSAGE
 const gameOver = {
@@ -222,26 +371,27 @@ const gameOver = {
     y: 90,
 
     draw: function () {
-        if (state.current == state.over) {
+        if (state.current === state.over) {
             ctx.drawImage(sprite, this.sx, this.sy, this.w, this.h, this.x, this.y, this.w, this.h);
         }
     }
-
-}
+};
 
 startBtn.addEventListener("click", function () {
     state.current = state.game;
-})
+});
 
 function draw() {
     ctx.fillStyle = "#ecdfc8";
     ctx.fillRect(0, 0, cvs.width, cvs.height);
 
     bg.draw();
+    hoops.drawTop();
     ball.draw();
-    hoops.draw();
+    hoops.drawBottom();
+    scoreBoard.draw();
     gameOver.draw();
-};
+}
 
 // UPDATE
 function update() {
@@ -258,4 +408,7 @@ function loop() {
 
     requestAnimationFrame(loop);
 }
+
 loop();
+
+
