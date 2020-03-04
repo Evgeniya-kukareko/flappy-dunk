@@ -1,9 +1,10 @@
-const DEBUG = true;
+const DEBUG = false;
 
 const cvs = document.getElementById("my-canvas");
 const ctx = cvs.getContext("2d");
 
 const startBtn = document.getElementById("start");
+const userGreetings = document.getElementById("hiUser");
 
 const DEGREE = Math.PI / 180;
 const DEAD_LINE = 81;
@@ -46,6 +47,17 @@ function detectRectCollision(zone1, zone2) {
     return false;
 }
 
+function setGameOver() {
+    state.current = state.over;
+    DIE.play();
+    console.log(scoreBoard.currentScore)
+
+    db.collection("log").doc(user).set({
+        score: scoreBoard.currentScore
+    },{ merge: true });
+
+}
+
 cvs.addEventListener("click", function (event) {
     switch (state.current) {
         case state.game:
@@ -55,6 +67,9 @@ cvs.addEventListener("click", function (event) {
             break;
     }
 });
+
+// USER
+let user = "";
 
 // BACKGROUND
 const bg = {
@@ -151,8 +166,7 @@ const ball = {
             if (this.dY + this.wh / 2 >= cvs.height - DEAD_LINE) {
                 this.dY = cvs.height - DEAD_LINE - this.wh / 2;
                 if (state.current === state.game) {
-                    state.current = state.over;
-                    DIE.play();
+                    return setGameOver();
                 }
             }
 
@@ -321,8 +335,7 @@ const hoops = {
             hoop.x -= this.nx;
 
             if (hoop.x < (ball.dX - ball.wh * 3) && !hoop.scored) {
-                state.current = state.over;
-                return;
+                return setGameOver();
             }
 
             if (!hoop.enterVisited && !hoop.exitVisited && detectRectCollision(ball.zone(), hoop.enterZone())) {
@@ -338,8 +351,7 @@ const hoops = {
                     }
                 } else {
                     hoop.exitVisited = true;
-                    state.current = state.over;
-                    return;
+                    return setGameOver();
                 }
 
             }
@@ -411,4 +423,43 @@ function loop() {
 
 loop();
 
+// FIREBASE
+var firebaseConfig = {
+    apiKey: "AIzaSyAKsxt1CcbzZ9fKDQZYrmmCHVwJsi1eKYY",
+    authDomain: "flappy-dunk-3b226.firebaseapp.com",
+    databaseURL: "https://flappy-dunk-3b226.firebaseio.com",
+    projectId: "flappy-dunk-3b226",
+    storageBucket: "flappy-dunk-3b226.appspot.com",
+    messagingSenderId: "542960656359",
+    appId: "1:542960656359:web:2e3a76f098a42f1b586742"
+};
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
 
+var db = firebase.firestore();
+
+const saveUserBtn = document.getElementById("userNameSaveBtn");
+const userNameInput = document.getElementById("userName");
+
+saveUserBtn.addEventListener("click", function() {
+    let name = userNameInput.value;
+
+    // проверка на ввод пустой строки 
+    if (name === "") {
+        return alert("no")
+    }
+
+    db.collection("log").doc(name).get().then(function(doc) {
+        if (doc.exists) {
+            console.log("Document data:", doc.data());
+        } else {
+            db.collection("log").doc(name).set({
+                user: name,
+                score: 0
+            })
+        }
+    });
+    user = name;
+    userGreetings.innerText = "Hi, " + user;
+    saveUserBtn.setAttribute("data-dismiss", "modal")
+})

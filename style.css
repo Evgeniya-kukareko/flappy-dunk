@@ -1,0 +1,19 @@
+button {
+    margin: 0 10px;
+}
+
+.button-block {
+    margin: 5px;
+}
+
+canvas {
+    display: block;
+    border: 1px solid #000;
+    margin: 0 auto;
+}
+
+p {
+    font-size: 24px;
+    text-align: center;
+    margin: 0;
+}
