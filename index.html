@@ -15,7 +15,7 @@
 
 <body>
     <div class="modal fade" id="enterModal" tabindex="-1" role="dialog" aria-labelledby="enterModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-dialog-centered" role="document">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title" id="exampleModalLabel">Введите Ваше имя:</h5>
@@ -34,11 +34,37 @@
         </div>
       </div>
 
+      <div class="modal fade" id="levelModal" tabindex="-1" role="dialog" aria-labelledby="levelModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="levelModalLabel">Выберите уровень:</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+                <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
+                    <div class="btn-group btn-group-lg mr-2" role="group" aria-label="First group">
+                      <button type="button" class="btn btn-secondary">1</button>
+                      <button type="button" class="btn btn-secondary">2</button>
+                      <button type="button" class="btn btn-secondary">3</button>
+                    </div>
+                  </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
     <div class="d-flex align-items-center justify-content-center button-block">
         <button class="btn btn-warning" data-toggle="modal" data-target="#enterModal">Вход</button>
         <p id="hiUser"></p>
-        <button class="btn btn-warning" id="start">Старт</button>
-        <button class="btn btn-warning">Уровень</button>
+        <button class="btn btn-warning" id="start" disabled>Старт</button>
+        <button class="btn btn-warning" data-toggle="modal" data-target="#levelModal">Уровень</button>
         <button class="btn btn-warning">Мяч</button>
         <button class="btn btn-warning">Рейтинг</button>
     </div>

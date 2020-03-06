@@ -1,4 +1,4 @@
-const DEBUG = false;
+const DEBUG = true;
 
 const cvs = document.getElementById("my-canvas");
 const ctx = cvs.getContext("2d");
@@ -34,7 +34,11 @@ const state = {
     current: 0,
     start: 0,
     game: 1,
-    over: 2
+    over: 2,
+
+    isGame: function () {
+        return this.current === this.game;
+    }
 }
 
 function detectRectCollision(zone1, zone2) {
@@ -45,17 +49,6 @@ function detectRectCollision(zone1, zone2) {
         return true;
     }
     return false;
-}
-
-function setGameOver() {
-    state.current = state.over;
-    DIE.play();
-    console.log(scoreBoard.currentScore)
-
-    db.collection("log").doc(user).set({
-        score: scoreBoard.currentScore
-    },{ merge: true });
-
 }
 
 cvs.addEventListener("click", function (event) {
@@ -85,6 +78,10 @@ const bg = {
     h: 600,
     nx: 2,
 
+    reset: function() {
+        this.dx = 0;
+    },
+
     draw: function () {
         if (state.current === state.start) {
             ctx.fillStyle = "#ecdfc8";
@@ -96,7 +93,7 @@ const bg = {
         }
     },
     update: function () {
-        if (state.current === state.game) {
+        if (state.isGame()) {
             this.dx = (this.dx - this.nx) % 970;
         }
     }
@@ -124,6 +121,12 @@ const ball = {
     startPosition: 150,
 
     scoreYPercent: 0.2,
+    
+    reset: function() {
+        this.dY = this.startPosition; // RESET POSITION OF THE BALL AFTER GAME OVER
+        this.rotation = 0;
+        this.speed = 0;
+    },
 
     radius: function () {
         return this.wh / 2;
@@ -155,28 +158,26 @@ const ball = {
 
     },
     update: function () {
-
         if (state.current === state.start) {
-            this.dY = this.startPosition; // RESET POSITION OF THE BALL AFTER GAME OVER
-            this.rotation = 0;
+            return;
+        }
+
+        this.speed += this.gravity;
+        this.dY += this.speed;
+
+        if (this.dY + this.wh / 2 >= cvs.height - DEAD_LINE) {
+            this.dY = cvs.height - DEAD_LINE - this.wh / 2;
+            if (state.isGame()) {
+                return setGameOver();
+            }
+        }
+
+        // IF THE SPEED IS GREATER THAN THE JUMP MEANS THE BALL IS FALLING DOWN
+        if (this.speed >= this.jump) {
+            this.rotation = 90 * DEGREE;
+
         } else {
-            this.speed += this.gravity;
-            this.dY += this.speed;
-
-            if (this.dY + this.wh / 2 >= cvs.height - DEAD_LINE) {
-                this.dY = cvs.height - DEAD_LINE - this.wh / 2;
-                if (state.current === state.game) {
-                    return setGameOver();
-                }
-            }
-
-            // IF THE SPEED IS GREATER THAN THE JUMP MEANS THE BALL IS FALLING DOWN
-            if (this.speed >= this.jump) {
-                this.rotation = 90 * DEGREE;
-
-            } else {
-                this.rotation = -25 * DEGREE;
-            }
+            this.rotation = -25 * DEGREE;
         }
     },
     flap: function () {
@@ -266,8 +267,12 @@ const hoops = {
         sh: 40,
     },
 
-    maxYPos: 180,
+    maxYPos: 150,
     nx: 2,
+
+    reset: function() {
+        this.position = [];
+    },
 
     drawTop: function () {
         for (let i = 0; i < this.position.length; i++) {
@@ -319,9 +324,9 @@ const hoops = {
         }
     },
     update: function () {
-        if (state.current !== state.game) return;
+        if (!state.isGame()) return;
 
-        if (frames % this.frequencyRate === 0) {
+        if (frames % this.frequencyRate === 0 && this.position.length < finishLine.showFinish) {
             this.position.push(new Hoop(
                 cvs.width,
                 this.maxYPos * (Math.random() + 1)
@@ -359,9 +364,67 @@ const hoops = {
     },
 };
 
+// FINISH LINE
+const finishLine = {
+    sx: 985,
+    sy: 5,
+    sw: 135,
+    sh: 830,
+
+    x: cvs.width + 250,
+    y: 0,
+    w: 100,
+    h: cvs.height + 15,
+
+    nx: 2,
+
+    showFinish: 2,
+    reset: function() {
+        this.x = cvs.width + 250;
+    },
+    zone: function () {
+        return [this.x, this.y, this.w, this.h];
+    },
+
+    draw: function () {
+        if (hoops.position.length == this.showFinish) {
+            ctx.drawImage(
+                sprite,
+                this.sx, this.sy, this.sw, this.sh,
+                this.x, this.y, this.w, this.h
+            );
+            if (DEBUG) {
+                // draw zone
+                ctx.strokeStyle = 'red';
+                ctx.beginPath();
+                ctx.rect(...this.zone());
+                ctx.stroke();
+            }
+        }
+    },
+    update: function () {
+        if (!state.isGame()) {
+            return;
+        }
+
+        if (hoops.position.length == this.showFinish) {
+            this.x -= this.nx;
+        };
+
+        if (detectRectCollision(ball.zone(), finishLine.zone())) {
+            state.current = state.over;
+
+        }
+    }
+}
+
+// Score
 const scoreBoard = {
     bestScore: 0,
     currentScore: 0,
+    reset: function() {
+        this.currentScore = 0;
+    },
     addScore: function () {
         this.currentScore += 1;
         SCORE_S.play();
@@ -369,11 +432,11 @@ const scoreBoard = {
     draw: function () {
         ctx.font = "24px Arial";
         ctx.fillStyle = "#FFFFFF";
-        ctx.fillText("Score: " + this.currentScore, cvs.width / 2 - 50, 25);
+        ctx.fillText("Best: " + this.bestScore + "   Score: " + this.currentScore, cvs.width / 2 - 75, 25);
     }
 };
 
-// GAME OVER MESSAGE
+// GAME OVER
 const gameOver = {
     sx: 425,
     sy: 685,
@@ -389,15 +452,37 @@ const gameOver = {
     }
 };
 
+function setGameOver() {
+    state.current = state.over;
+    DIE.play();
+    console.log(scoreBoard.currentScore)
+
+    db.collection("log").doc(user).set({
+        score: scoreBoard.currentScore
+    }, { merge: true });
+
+}
+
 startBtn.addEventListener("click", function () {
-    state.current = state.game;
+    resetAndStartGame();
 });
+
+function resetAndStartGame() {
+    bg.reset();
+    ball.reset();
+    hoops.reset();
+    finishLine.reset();
+    scoreBoard.reset();
+    
+    state.current = state.game;
+}
 
 function draw() {
     ctx.fillStyle = "#ecdfc8";
     ctx.fillRect(0, 0, cvs.width, cvs.height);
 
     bg.draw();
+    finishLine.draw();
     hoops.drawTop();
     ball.draw();
     hoops.drawBottom();
@@ -410,6 +495,7 @@ function update() {
     bg.update();
     ball.update();
     hoops.update();
+    finishLine.update();
 }
 
 // LOOP
@@ -441,7 +527,7 @@ var db = firebase.firestore();
 const saveUserBtn = document.getElementById("userNameSaveBtn");
 const userNameInput = document.getElementById("userName");
 
-saveUserBtn.addEventListener("click", function() {
+saveUserBtn.addEventListener("click", function () {
     let name = userNameInput.value;
 
     // проверка на ввод пустой строки 
@@ -449,17 +535,19 @@ saveUserBtn.addEventListener("click", function() {
         return alert("no")
     }
 
-    db.collection("log").doc(name).get().then(function(doc) {
+    db.collection("log").doc(name).get().then(function (doc) {
         if (doc.exists) {
             console.log("Document data:", doc.data());
         } else {
             db.collection("log").doc(name).set({
                 user: name,
-                score: 0
+                score: 0,
+                best: 0
             })
         }
     });
     user = name;
     userGreetings.innerText = "Hi, " + user;
-    saveUserBtn.setAttribute("data-dismiss", "modal")
+    saveUserBtn.setAttribute("data-dismiss", "modal");
+    startBtn.disabled = false;
 })
