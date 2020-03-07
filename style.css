@@ -20,6 +20,11 @@ p {
 
 img {
     margin: 5px;
+    border: solid 2px transparent;
+}
+
+.choose {
+    border: solid 2px black;
 }
 
 img:hover {

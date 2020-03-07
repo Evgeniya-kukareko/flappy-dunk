@@ -1,15 +1,22 @@
-const DEBUG = true;
+const DEBUG = false;
 const DEGREE = Math.PI / 180;
 const DEAD_LINE = 81;
 
 const cvs = document.getElementById("my-canvas");
+cvs.onselectstart = function () { return false; }
+
 const ctx = cvs.getContext("2d");
 
 const startBtn = document.getElementById("start");
 const ballBtn = document.getElementById("ballButton");
 const saveUserBtn = document.getElementById("userNameSaveBtn");
+const chooseBallBtn = document.getElementById("chooseBallBtn");
 const userNameInput = document.getElementById("userName");
 const userGreetings = document.getElementById("hiUser");
+const chooseBallArea = document.getElementById("chooseBallArea");
+
+const ballImages = document.getElementsByTagName("img");
+
 
 let frames = 0;
 
@@ -82,6 +89,29 @@ function loadUser() {
     userNameInput.value = sessionData.name;
 }
 
+chooseBallArea.addEventListener("click", function (event) {
+    if (event.target.tagName == 'IMG') {
+        for (i = 0; i < ballImages.length; i++) {
+            removeBorder(ballImages[i]);
+        };
+        let img = event.target;
+        img.classList.add("choose");
+        let ballNumber = parseInt(img.dataset.ball, 10);
+        chooseBallBtn.addEventListener("click", function () {
+            img.classList.remove("choose");
+            sessionData.ball = ballNumber;
+            saveSession();
+            ball.setBall();
+        })
+    }
+
+})
+
+function removeBorder(el) {
+    el.classList.remove("choose");
+}
+
+
 function detectRectCollision(zone1, zone2) {
     if (zone1[0] < zone2[0] + zone2[2] &&
         zone1[0] + zone1[2] > zone2[0] &&
@@ -116,7 +146,7 @@ const bg = {
     h: 600,
     nx: 2,
 
-    reset: function() {
+    reset: function () {
         this.dx = 0;
     },
 
@@ -139,6 +169,23 @@ const bg = {
 
 // BALL
 const ball = {
+    setBall: function () {
+        switch (sessionData.ball) {
+            case 1:
+                this.sx = 5;
+                this.sy = 5;
+                break;
+            case 2:
+                this.sx = 85;
+                this.sy = 5;
+                break;
+            case 3:
+                this.sx = 165;
+                this.sy = 10;
+            break;
+        }
+    },
+
     // source
     sx: 5,
     sy: 5,
@@ -159,8 +206,8 @@ const ball = {
     startPosition: 150,
 
     scoreYPercent: 0.2,
-    
-    reset: function() {
+
+    reset: function () {
         this.dY = this.startPosition; // RESET POSITION OF THE BALL AFTER GAME OVER
         this.rotation = 0;
         this.speed = 0;
@@ -315,7 +362,7 @@ const hoops = {
     maxYPos: 150,
     nx: 2,
 
-    reset: function() {
+    reset: function () {
         this.position = [];
     },
 
@@ -395,7 +442,8 @@ const hoops = {
             }
 
             if (detectRectCollision(ball.zone(), hoop.leftBorderZone())) {
-                ball.flap();
+                // touch border
+                ball.dX += 1;
             }
 
             if (!hoop.enterVisited && !hoop.exitVisited && detectRectCollision(ball.zone(), hoop.enterZone())) {
@@ -434,7 +482,7 @@ const finishLine = {
     nx: 2,
 
     showFinish: 2,
-    reset: function() {
+    reset: function () {
         this.x = cvs.width + 250;
     },
     zone: function () {
@@ -477,7 +525,7 @@ const finishLine = {
 const scoreBoard = {
     bestScore: 0,
     currentScore: 0,
-    reset: function() {
+    reset: function () {
         this.currentScore = 0;
     },
     addScore: function () {
@@ -522,7 +570,7 @@ startBtn.addEventListener("click", function () {
     resetAndStartGame();
 });
 
-ballBtn.addEventListener("click", function() {
+ballBtn.addEventListener("click", function () {
 
 })
 
@@ -532,7 +580,7 @@ function resetAndStartGame() {
     hoops.reset();
     finishLine.reset();
     scoreBoard.reset();
-    
+
     state.current = state.game;
 }
 
@@ -569,6 +617,7 @@ function loop() {
 
 loop();
 loadUser();
+ball.setBall();
 
 // FIREBASE
 var firebaseConfig = {
@@ -606,7 +655,7 @@ saveUserBtn.addEventListener("click", function () {
     });
 
     setUserName(name);
-    
+
     saveUserBtn.setAttribute("data-dismiss", "modal");
     startBtn.disabled = false;
 })
