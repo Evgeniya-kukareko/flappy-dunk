@@ -283,7 +283,7 @@ class Hoop {
     }
 
     leftBorderZone() {
-        const width = this.width * this.borderPercent;
+        const width = (this.width * this.borderPercent) - 10;
 
         return [this.x, this.y, width, this.height];
     }

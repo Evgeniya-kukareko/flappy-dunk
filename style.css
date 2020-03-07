@@ -17,3 +17,11 @@ p {
     text-align: center;
     margin: 0;
 }
+
+img {
+    margin: 5px;
+}
+
+img:hover {
+    cursor: pointer;
+}
