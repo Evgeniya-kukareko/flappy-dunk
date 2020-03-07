@@ -4,6 +4,9 @@ const cvs = document.getElementById("my-canvas");
 const ctx = cvs.getContext("2d");
 
 const startBtn = document.getElementById("start");
+const ballBtn = document.getElementById("ballButton");
+const saveUserBtn = document.getElementById("userNameSaveBtn");
+const userNameInput = document.getElementById("userName");
 const userGreetings = document.getElementById("hiUser");
 
 const DEGREE = Math.PI / 180;
@@ -41,6 +44,44 @@ const state = {
     }
 }
 
+// USER
+
+const sessionData = loadSession();
+
+function saveSession() {
+    localStorage.setItem('session', JSON.stringify(sessionData));
+}
+
+// Если в localSotage ничего нету - вернет sessionData (дефолтные значения)
+function loadSession() {
+    const defaultData = {
+        ball: 1,
+        name: ""
+    };
+
+    const session = localStorage.getItem('session');
+    if (!session) {
+        return defaultData;
+    }
+    return JSON.parse(session);
+}
+
+function setUserName(val) {
+    sessionData.name = val;
+    userGreetings.innerText = "Hi, " + sessionData.name;
+    saveSession();
+}
+
+function loadUser() {
+    if (!sessionData.name) {
+        return;
+    }
+
+    userGreetings.innerText = "Hi, " + sessionData.name;
+    startBtn.disabled = false;
+    userNameInput.value = sessionData.name;
+}
+
 function detectRectCollision(zone1, zone2) {
     if (zone1[0] < zone2[0] + zone2[2] &&
         zone1[0] + zone1[2] > zone2[0] &&
@@ -54,15 +95,13 @@ function detectRectCollision(zone1, zone2) {
 cvs.addEventListener("click", function (event) {
     switch (state.current) {
         case state.game:
-            if (ball.dY - ball.radius() <= 0) return;
             ball.flap();
             FLAP.play();
             break;
     }
 });
 
-// USER
-let user = "";
+
 
 // BACKGROUND
 const bg = {
@@ -457,7 +496,7 @@ function setGameOver() {
     DIE.play();
     console.log(scoreBoard.currentScore)
 
-    db.collection("log").doc(user).set({
+    db.collection("log").doc(sessionData.name).set({
         score: scoreBoard.currentScore
     }, { merge: true });
 
@@ -466,6 +505,10 @@ function setGameOver() {
 startBtn.addEventListener("click", function () {
     resetAndStartGame();
 });
+
+ballBtn.addEventListener("click", function() {
+
+})
 
 function resetAndStartGame() {
     bg.reset();
@@ -508,6 +551,7 @@ function loop() {
 }
 
 loop();
+loadUser();
 
 // FIREBASE
 var firebaseConfig = {
@@ -523,9 +567,6 @@ var firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 var db = firebase.firestore();
-
-const saveUserBtn = document.getElementById("userNameSaveBtn");
-const userNameInput = document.getElementById("userName");
 
 saveUserBtn.addEventListener("click", function () {
     let name = userNameInput.value;
@@ -546,8 +587,11 @@ saveUserBtn.addEventListener("click", function () {
             })
         }
     });
-    user = name;
-    userGreetings.innerText = "Hi, " + user;
+
+    setUserName(name);
+    
     saveUserBtn.setAttribute("data-dismiss", "modal");
     startBtn.disabled = false;
 })
+
+

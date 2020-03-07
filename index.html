@@ -59,14 +59,33 @@
         </div>
       </div>
 
+      <div class="modal fade" id="scoreListModal" tabindex="-1" role="dialog" aria-labelledby="scoreListModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="levelModalLabel">Рейтинг игроков:</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+                <ol id="scoreList"></ol>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
 
     <div class="d-flex align-items-center justify-content-center button-block">
         <button class="btn btn-warning" data-toggle="modal" data-target="#enterModal">Вход</button>
         <p id="hiUser"></p>
         <button class="btn btn-warning" id="start" disabled>Старт</button>
         <button class="btn btn-warning" data-toggle="modal" data-target="#levelModal">Уровень</button>
-        <button class="btn btn-warning">Мяч</button>
-        <button class="btn btn-warning">Рейтинг</button>
+        <button class="btn btn-warning" id="ballButton">Мяч</button>
+        <button class="btn btn-warning" data-toggle="modal" data-target="#scoreListModal">Рейтинг</button>
     </div>
     <canvas id="my-canvas" width="800" height="600"></canvas>
 
