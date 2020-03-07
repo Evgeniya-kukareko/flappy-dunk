@@ -1,4 +1,6 @@
 const DEBUG = true;
+const DEGREE = Math.PI / 180;
+const DEAD_LINE = 81;
 
 const cvs = document.getElementById("my-canvas");
 const ctx = cvs.getContext("2d");
@@ -9,8 +11,6 @@ const saveUserBtn = document.getElementById("userNameSaveBtn");
 const userNameInput = document.getElementById("userName");
 const userGreetings = document.getElementById("hiUser");
 
-const DEGREE = Math.PI / 180;
-const DEAD_LINE = 81;
 let frames = 0;
 
 const sprite = new Image();
@@ -96,7 +96,6 @@ cvs.addEventListener("click", function (event) {
     switch (state.current) {
         case state.game:
             ball.flap();
-            FLAP.play();
             break;
     }
 });
@@ -221,6 +220,7 @@ const ball = {
     },
     flap: function () {
         this.speed = -this.jump;
+        FLAP.play();
     },
     zone: function () {
         return [this.dX, this.dY, this.wh, this.wh];
@@ -280,6 +280,12 @@ class Hoop {
         const height = this.height * this.scoreYPercent;
 
         return [x, y, width, height];
+    }
+
+    leftBorderZone() {
+        const width = this.width * this.borderPercent;
+
+        return [this.x, this.y, width, this.height];
     }
 
     hitBox() {
@@ -343,6 +349,12 @@ const hoops = {
                 ctx.rect(...hoop.hitBox());
                 ctx.stroke();
 
+                // draw left border
+                ctx.strokeStyle = 'blue';
+                ctx.beginPath();
+                ctx.rect(...hoop.leftBorderZone());
+                ctx.stroke();
+
                 // draw enter zone
                 ctx.strokeStyle = 'green';
                 ctx.beginPath();
@@ -380,6 +392,10 @@ const hoops = {
 
             if (hoop.x < (ball.dX - ball.wh * 3) && !hoop.scored) {
                 return setGameOver();
+            }
+
+            if (detectRectCollision(ball.zone(), hoop.leftBorderZone())) {
+                ball.flap();
             }
 
             if (!hoop.enterVisited && !hoop.exitVisited && detectRectCollision(ball.zone(), hoop.enterZone())) {
@@ -520,6 +536,7 @@ function resetAndStartGame() {
     state.current = state.game;
 }
 
+// DRAW
 function draw() {
     ctx.fillStyle = "#ecdfc8";
     ctx.fillRect(0, 0, cvs.width, cvs.height);
