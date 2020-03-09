@@ -15,6 +15,12 @@ const userNameInput = document.getElementById("userName");
 const userGreetings = document.getElementById("hiUser");
 const chooseBallArea = document.getElementById("chooseBallArea");
 
+
+const levelBlock = document.getElementById("levelBlock");
+const firstLevBtn = document.getElementById("firstLevel");
+const secondLevBtn = document.getElementById("secondLevel");
+const thirdLevBtn = document.getElementById("thirdLevel");
+
 const ballImages = document.getElementsByTagName("img");
 
 
@@ -50,6 +56,31 @@ const state = {
         return this.current === this.game;
     }
 }
+
+// LEVEL 
+const level = {
+    lv1: 5,
+    lv2: 10,
+    lv3: 30,
+}
+
+let currentLevel = level.lv1;
+
+firstLevBtn.addEventListener("click", function() {
+    currentLevel = level.lv1;
+    firstLevBtn.setAttribute("data-dismiss", "modal");
+    console.log(currentLevel);
+});
+secondLevBtn.addEventListener("click", function() {
+    currentLevel = level.lv2;
+    secondLevBtn.setAttribute("data-dismiss", "modal");
+    console.log(currentLevel);
+});
+thirdLevBtn.addEventListener("click", function() {
+    currentLevel = level.lv3;
+    thirdLevBtn.setAttribute("data-dismiss", "modal");
+    console.log(currentLevel);
+});
 
 // USER
 
@@ -125,6 +156,7 @@ function detectRectCollision(zone1, zone2) {
 cvs.addEventListener("click", function (event) {
     switch (state.current) {
         case state.game:
+            if (ball.dY - ball.radius <= 0) return;
             ball.flap();
             break;
     }
@@ -219,7 +251,7 @@ const ball = {
     draw: function () {
         if (state.current === state.start) {
             // on start screen
-            ctx.drawImage(sprite, this.sx, this.sy, this.sw, this.sh, cvs.width / 2 - this.wh / 2, cvs.height / 2 - this.wh / 2, 100, 100);
+            ctx.drawImage(sprite, this.sx, this.sy, this.sw, this.sh, cvs.width / 2 - 50, cvs.height / 2 - 50, 100, 100);
         } else {
             if (DEBUG) {
                 ctx.strokeStyle = 'yellow';
@@ -330,9 +362,14 @@ class Hoop {
     }
 
     leftBorderZone() {
-        const width = (this.width * this.borderPercent) - 10;
+        const borderWidth = this.width * this.borderPercent;
+        const width = borderWidth;
 
-        return [this.x, this.y, width, this.height];
+        const y = this.y + borderWidth/2;
+
+        const height = this.height * (1 - this.enterYPercent);
+
+        return [this.x, y, width, height];
     }
 
     hitBox() {
@@ -424,7 +461,7 @@ const hoops = {
     update: function () {
         if (!state.isGame()) return;
 
-        if (frames % this.frequencyRate === 0 && this.position.length < finishLine.showFinish) {
+        if (frames % this.frequencyRate === 0 && this.position.length < finishLine.showFinish()) {
             this.position.push(new Hoop(
                 cvs.width,
                 this.maxYPos * (Math.random() + 1)
@@ -443,7 +480,8 @@ const hoops = {
 
             if (detectRectCollision(ball.zone(), hoop.leftBorderZone())) {
                 // touch border
-                ball.dX += 1;
+                ball.dX += this.nx;
+                ball.dY -= this.nx * 2;
             }
 
             if (!hoop.enterVisited && !hoop.exitVisited && detectRectCollision(ball.zone(), hoop.enterZone())) {
@@ -481,7 +519,9 @@ const finishLine = {
 
     nx: 2,
 
-    showFinish: 2,
+    showFinish: function() {
+        return currentLevel;
+    },
     reset: function () {
         this.x = cvs.width + 250;
     },
@@ -490,7 +530,7 @@ const finishLine = {
     },
 
     draw: function () {
-        if (hoops.position.length == this.showFinish) {
+        if (hoops.position.length == this.showFinish()) {
             ctx.drawImage(
                 sprite,
                 this.sx, this.sy, this.sw, this.sh,
@@ -510,7 +550,7 @@ const finishLine = {
             return;
         }
 
-        if (hoops.position.length == this.showFinish) {
+        if (hoops.position.length == this.showFinish()) {
             this.x -= this.nx;
         };
 
@@ -538,6 +578,7 @@ const scoreBoard = {
         ctx.fillText("Best: " + this.bestScore + "   Score: " + this.currentScore, cvs.width / 2 - 75, 25);
     }
 };
+
 
 // GAME OVER
 const gameOver = {
