@@ -57,6 +57,61 @@ const state = {
     }
 }
 
+// FIREBASE
+var firebaseConfig = {
+    apiKey: "AIzaSyAKsxt1CcbzZ9fKDQZYrmmCHVwJsi1eKYY",
+    authDomain: "flappy-dunk-3b226.firebaseapp.com",
+    databaseURL: "https://flappy-dunk-3b226.firebaseio.com",
+    projectId: "flappy-dunk-3b226",
+    storageBucket: "flappy-dunk-3b226.appspot.com",
+    messagingSenderId: "542960656359",
+    appId: "1:542960656359:web:2e3a76f098a42f1b586742"
+};
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+var db = firebase.firestore();
+
+saveUserBtn.addEventListener("click", function () {
+    let name = userNameInput.value.trim();
+
+    // проверка на ввод пустой строки 
+    if (name === "") {
+        return alert("no")
+    }
+
+    db.collection("log").doc(name).get().then(function (doc) {
+        if (doc.exists) {
+            const data = doc.data();
+            console.log("Document data:", doc.data());
+            scoreBoard.setCurrentScore(data.score);
+        } else {
+            db.collection("log").doc(name).set({
+                user: name,
+                score: 0
+            })
+        }
+    });
+
+    setUserName(name);
+
+    saveUserBtn.setAttribute("data-dismiss", "modal");
+    startBtn.disabled = false;
+})
+
+
+function getScore(callback) {
+    db.collection("log").doc(sessionData.name).get().then(function (doc) {
+        if (doc.exists) {
+            let myData = doc.data();
+            score = myData.score;
+            callback(score);
+        } else {
+            callback(0);
+        }
+    });
+}
+
 // LEVEL 
 const level = {
     lv1: 5,
@@ -118,6 +173,10 @@ function loadUser() {
     userGreetings.innerText = "Hi, " + sessionData.name;
     startBtn.disabled = false;
     userNameInput.value = sessionData.name;
+    
+    getScore(function(score){
+        scoreBoard.setCurrentScore(score);
+     });
 }
 
 chooseBallArea.addEventListener("click", function (event) {
@@ -557,16 +616,20 @@ const finishLine = {
         if (detectRectCollision(ball.zone(), finishLine.zone())) {
             state.current = state.over;
 
+            db.collection("log").doc(sessionData.name).set({
+                score: scoreBoard.currentScore
+            }, { merge: true });
+
         }
     }
 }
 
 // Score
 const scoreBoard = {
-    bestScore: 0,
+    
     currentScore: 0,
-    reset: function () {
-        this.currentScore = 0;
+    setCurrentScore: function(newScore) {
+        this.currentScore = newScore;
     },
     addScore: function () {
         this.currentScore += 1;
@@ -575,8 +638,9 @@ const scoreBoard = {
     draw: function () {
         ctx.font = "24px Arial";
         ctx.fillStyle = "#FFFFFF";
-        ctx.fillText("Best: " + this.bestScore + "   Score: " + this.currentScore, cvs.width / 2 - 75, 25);
+        ctx.fillText("Score: " + this.currentScore, cvs.width / 2 - 75, 25);
     }
+
 };
 
 
@@ -620,7 +684,7 @@ function resetAndStartGame() {
     ball.reset();
     hoops.reset();
     finishLine.reset();
-    scoreBoard.reset();
+    
 
     state.current = state.game;
 }
@@ -660,45 +724,12 @@ loop();
 loadUser();
 ball.setBall();
 
-// FIREBASE
-var firebaseConfig = {
-    apiKey: "AIzaSyAKsxt1CcbzZ9fKDQZYrmmCHVwJsi1eKYY",
-    authDomain: "flappy-dunk-3b226.firebaseapp.com",
-    databaseURL: "https://flappy-dunk-3b226.firebaseio.com",
-    projectId: "flappy-dunk-3b226",
-    storageBucket: "flappy-dunk-3b226.appspot.com",
-    messagingSenderId: "542960656359",
-    appId: "1:542960656359:web:2e3a76f098a42f1b586742"
-};
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+// SCORELIST
+const players = [];
 
-var db = firebase.firestore();
-
-saveUserBtn.addEventListener("click", function () {
-    let name = userNameInput.value;
-
-    // проверка на ввод пустой строки 
-    if (name === "") {
-        return alert("no")
-    }
-
-    db.collection("log").doc(name).get().then(function (doc) {
-        if (doc.exists) {
-            console.log("Document data:", doc.data());
-        } else {
-            db.collection("log").doc(name).set({
-                user: name,
-                score: 0,
-                best: 0
-            })
-        }
+db.collection("log").get().then(function(querySnapshot) {
+    querySnapshot.forEach(function(doc) {
+        players.push(doc.data());
+        
     });
-
-    setUserName(name);
-
-    saveUserBtn.setAttribute("data-dismiss", "modal");
-    startBtn.disabled = false;
-})
-
-
+});
