@@ -725,11 +725,41 @@ loadUser();
 ball.setBall();
 
 // SCORELIST
-const players = [];
 
-db.collection("log").get().then(function(querySnapshot) {
-    querySnapshot.forEach(function(doc) {
-        players.push(doc.data());
-        
+function printUser(player) {
+    let userListContainer = document.getElementById('scoreTable');
+    let li = document.createElement('li');
+    li.innerHTML = `<strong>${player.user}</strong> : ${player.score}`;
+    userListContainer.appendChild(li);
+}
+
+function getUsersList(callback) {
+    db.collection("log").get().then(function(querySnapshot) {
+        const players = [];
+        querySnapshot.forEach(function(doc) {
+            players.push(doc.data());
+        });
+        console.log(players);
+        callback(players);
     });
-});
+}
+
+function createScoreList($spinner) {
+    getUsersList(function(players) {
+        $spinner.hide();
+        players.sort((p1, p2) => p2.score - p1.score);
+        for (let i = 0; i < players.length; i++) {
+            printUser(players[i]);
+        }
+    });
+}
+
+$('#scoreModal').on('show.bs.modal', function () {
+    const $this = $(this);
+    const $spinner = $this.find('.spinner-border');
+    const $scoreTable = $this.find('#scoreTable');
+    $scoreTable.empty();
+    $spinner.show();
+
+    createScoreList($spinner);
+  })
