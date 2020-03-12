@@ -464,6 +464,7 @@ const hoops = {
     },
 
     maxYPos: 150,
+    moveBall: 2,
     nx: 2,
 
     reset: function () {
@@ -528,6 +529,15 @@ const hoops = {
     update: function () {
         if (!state.isGame()) return;
 
+        if (currentLevel === level.normalLv) {
+            this.frequencyRate = 160;
+            this.nx = 2,5;
+        } else if (currentLevel === level.hardLv) {
+            this.frequencyRate = 150;
+            this.nx = 3,5;
+            this.moveBall = 1.5;
+        }
+
         if (frames % this.frequencyRate === 0 && this.position.length < finishLine.showFinish()) {
             this.position.push(new Hoop(
                 cvs.width,
@@ -547,8 +557,8 @@ const hoops = {
 
             if (detectRectCollision(ball.zone(), hoop.leftBorderZone())) {
                 // touch border
-                ball.dX += this.nx;
-                ball.dY -= this.nx * 2;
+                ball.dX += this.moveBall;
+                ball.dY -= this.moveBall * 2;
             }
 
             if (!hoop.enterVisited && !hoop.exitVisited && detectRectCollision(ball.zone(), hoop.enterZone())) {
@@ -646,8 +656,16 @@ const scoreBoard = {
         this.totalScore = newScore;
     },
     addScore: function () {
-        this.currentScore += 1;
-        SCORE_S.play();
+        if (currentLevel === level.normalLv) {
+            this.currentScore += 2;
+            SCORE_S.play();
+        } else if (currentLevel === level.hardLv) {
+            this.currentScore += 3;
+            SCORE_S.play();
+        } else {
+            this.currentScore += 1;
+            SCORE_S.play();
+        }
     },
     draw: function () {
         ctx.font = "24px Arial";
