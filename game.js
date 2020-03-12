@@ -114,27 +114,34 @@ function getScore(callback) {
 
 // LEVEL 
 const level = {
-    lv1: 5,
-    lv2: 10,
-    lv3: 30,
+    easyLv: 5,
+    normalLv: 10,
+    hardLv: 30,
+
+    getLevel: function() {
+        if (currentLevel == this.easyLv) {
+            return "easy"
+        } else if (currentLevel == this.normalLv) {
+            return "normal"
+        } else {
+            return "hard"
+        }
+    }
 }
 
-let currentLevel = level.lv1;
+let currentLevel = level.easyLv;
 
 firstLevBtn.addEventListener("click", function() {
-    currentLevel = level.lv1;
+    currentLevel = level.easyLv;
     firstLevBtn.setAttribute("data-dismiss", "modal");
-    console.log(currentLevel);
 });
 secondLevBtn.addEventListener("click", function() {
-    currentLevel = level.lv2;
+    currentLevel = level.normalLv;
     secondLevBtn.setAttribute("data-dismiss", "modal");
-    console.log(currentLevel);
 });
 thirdLevBtn.addEventListener("click", function() {
-    currentLevel = level.lv3;
+    currentLevel = level.hardLv;
     thirdLevBtn.setAttribute("data-dismiss", "modal");
-    console.log(currentLevel);
 });
 
 // USER
@@ -638,7 +645,7 @@ const scoreBoard = {
     draw: function () {
         ctx.font = "24px Arial";
         ctx.fillStyle = "#FFFFFF";
-        ctx.fillText("Score: " + this.currentScore, cvs.width / 2 - 75, 25);
+        ctx.fillText("Level: " + level.getLevel() + "   Score: " + this.currentScore, cvs.width / 2 - 100, 25);
     }
 
 };
@@ -726,8 +733,9 @@ ball.setBall();
 
 // SCORELIST
 
+const userListContainer = document.getElementById('scoreTable');
+
 function printUser(player) {
-    let userListContainer = document.getElementById('scoreTable');
     let li = document.createElement('li');
     li.innerHTML = `<strong>${player.user}</strong> : ${player.score}`;
     userListContainer.appendChild(li);
@@ -757,8 +765,7 @@ function createScoreList($spinner) {
 $('#scoreModal').on('show.bs.modal', function () {
     const $this = $(this);
     const $spinner = $this.find('.spinner-border');
-    const $scoreTable = $this.find('#scoreTable');
-    $scoreTable.empty();
+    userListContainer.innerHTML = "";
     $spinner.show();
 
     createScoreList($spinner);
