@@ -306,7 +306,8 @@ const ball = {
 
     scoreYPercent: 0.2,
 
-    reset: function () {
+    reset: function () {ball.dX += this.moveBall;
+        this.dX = this.startPosition;
         this.dY = this.startPosition; // RESET POSITION OF THE BALL AFTER GAME OVER
         this.rotation = 0;
         this.speed = 0;
