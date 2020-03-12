@@ -51,6 +51,7 @@ const state = {
     start: 0,
     game: 1,
     over: 2,
+    compliteLv: 3,
 
     isGame: function () {
         return this.current === this.game;
@@ -77,14 +78,14 @@ saveUserBtn.addEventListener("click", function () {
 
     // проверка на ввод пустой строки 
     if (name === "") {
-        return alert("no")
+        return alert("Поле не может быть пустым")
     }
 
     db.collection("log").doc(name).get().then(function (doc) {
         if (doc.exists) {
             const data = doc.data();
             console.log("Document data:", doc.data());
-            scoreBoard.setCurrentScore(data.score);
+            scoreBoard.setTotalScore(data.score);
         } else {
             db.collection("log").doc(name).set({
                 user: name,
@@ -182,7 +183,7 @@ function loadUser() {
     userNameInput.value = sessionData.name;
     
     getScore(function(score){
-        scoreBoard.setCurrentScore(score);
+        scoreBoard.setTotalScore(score);
      });
 }
 
@@ -341,7 +342,7 @@ const ball = {
 
     },
     update: function () {
-        if (state.current === state.start) {
+        if (state.current !== state.game) {
             return;
         }
 
@@ -621,10 +622,11 @@ const finishLine = {
         };
 
         if (detectRectCollision(ball.zone(), finishLine.zone())) {
-            state.current = state.over;
+            state.current = state.compliteLv;
+            scoreBoard.totalScore += scoreBoard.currentScore;
 
             db.collection("log").doc(sessionData.name).set({
-                score: scoreBoard.currentScore
+                score: scoreBoard.totalScore
             }, { merge: true });
 
         }
@@ -635,8 +637,13 @@ const finishLine = {
 const scoreBoard = {
     
     currentScore: 0,
-    setCurrentScore: function(newScore) {
-        this.currentScore = newScore;
+    totalScore: 0,
+
+    reset: function() {
+        this.currentScore = 0;
+    },
+    setTotalScore: function(newScore) {
+        this.totalScore = newScore;
     },
     addScore: function () {
         this.currentScore += 1;
@@ -645,7 +652,7 @@ const scoreBoard = {
     draw: function () {
         ctx.font = "24px Arial";
         ctx.fillStyle = "#FFFFFF";
-        ctx.fillText("Level: " + level.getLevel() + "   Score: " + this.currentScore, cvs.width / 2 - 100, 25);
+        ctx.fillText("Level: " + level.getLevel() + "   Total: " + this.totalScore + "   Score: " + this.currentScore, cvs.width / 2 - 170, 25);
     }
 
 };
@@ -671,28 +678,42 @@ function setGameOver() {
     state.current = state.over;
     DIE.play();
     console.log(scoreBoard.currentScore)
+    
+    scoreBoard.totalScore += scoreBoard.currentScore;
 
     db.collection("log").doc(sessionData.name).set({
-        score: scoreBoard.currentScore
+        score: scoreBoard.totalScore
     }, { merge: true });
 
+}
+
+// LEVEL COMPLITE
+const complite = {
+    sx: 410,
+    sy: 0,
+    w: 570,
+    h: 80,
+    x: cvs.width / 2 - 570 / 2,
+    y: 130,
+
+    draw: function () {
+        if (state.current === state.compliteLv) {
+            ctx.drawImage(sprite, this.sx, this.sy, this.w, this.h, this.x, this.y, this.w, this.h);
+        }
+    }
 }
 
 startBtn.addEventListener("click", function () {
     resetAndStartGame();
 });
 
-ballBtn.addEventListener("click", function () {
-
-})
-
 function resetAndStartGame() {
     bg.reset();
     ball.reset();
     hoops.reset();
     finishLine.reset();
+    scoreBoard.reset();
     
-
     state.current = state.game;
 }
 
@@ -707,6 +728,7 @@ function draw() {
     ball.draw();
     hoops.drawBottom();
     scoreBoard.draw();
+    complite.draw();
     gameOver.draw();
 }
 
